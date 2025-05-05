@@ -5,6 +5,12 @@ let video;
 let handPose;
 let hands = [];
 
+let circleX = 320; // 圓的初始 X 座標
+let circleY = 240; // 圓的初始 Y 座標
+let circleRadius = 50; // 圓的半徑
+let isDragging = false; // 是否正在拖動圓
+let trail = []; // 儲存軌跡的陣列
+
 function preload() {
   // Initialize HandPose model with flipped video input
   handPose = ml5.handPose({ flipped: true });
@@ -30,66 +36,61 @@ function setup() {
 function draw() {
   image(video, 0, 0);
 
-  // Ensure at least one hand is detected
+  // 畫出圓
+  fill(0, 255, 0, 150); // 半透明綠色
+  noStroke();
+  circle(circleX, circleY, circleRadius * 2);
+
+  // 畫出軌跡
+  stroke(255, 0, 0); // 紅色線條
+  strokeWeight(2);
+  noFill();
+  beginShape();
+  for (let point of trail) {
+    vertex(point.x, point.y);
+  }
+  endShape();
+
+  // 確保至少檢測到一隻手
   if (hands.length > 0) {
+    let fingerOnCircle = false; // 檢查是否有手指接觸圓
+
     for (let hand of hands) {
       if (hand.confidence > 0.1) {
-        // Loop through keypoints and draw circles
-        for (let i = 0; i < hand.keypoints.length; i++) {
-          let keypoint = hand.keypoints[i];
+        // 獲取食指的 keypoint (keypoint 8)
+        let fingertip = hand.keypoints[8];
 
-          // Color-code based on left or right hand
-          if (hand.handedness == "Left") {
-            fill(255, 0, 255);
-          } else {
-            fill(255, 255, 0);
-          }
+        // 檢測食指是否接觸到圓
+        let d = dist(fingertip.x, fingertip.y, circleX, circleY);
+        if (d < circleRadius) {
+          // 如果接觸到圓，讓圓跟隨食指移動
+          circleX = fingertip.x;
+          circleY = fingertip.y;
 
-          noStroke();
-          circle(keypoint.x, keypoint.y, 16);
+          // 設定拖動狀態並記錄軌跡
+          isDragging = true;
+          trail.push({ x: circleX, y: circleY });
+          fingerOnCircle = true;
         }
 
-        // Draw lines connecting keypoints 0 to 4
-        let color = hand.handedness == "Left" ? [255, 0, 255] : [255, 255, 0];
-        stroke(...color);
-        strokeWeight(2);
-        noFill();
-
-        for (let i = 0; i < 4; i++) {
-          let kp1 = hand.keypoints[i];
-          let kp2 = hand.keypoints[i + 1];
-          line(kp1.x, kp1.y, kp2.x, kp2.y);
-        }
-
-        // Draw lines connecting keypoints 5 to 8
-        for (let i = 5; i < 8; i++) {
-          let kp1 = hand.keypoints[i];
-          let kp2 = hand.keypoints[i + 1];
-          line(kp1.x, kp1.y, kp2.x, kp2.y);
-        }
-
-        
-        // Draw lines connecting keypoints 9 to 12
-        for (let i = 9; i < 12; i++) {
-          let kp1 = hand.keypoints[i];
-          let kp2 = hand.keypoints[i + 1];
-          line(kp1.x, kp1.y, kp2.x, kp2.y);
-        }
-
-         // Draw lines connecting keypoints 13 to 16
-         for (let i = 13; i < 16; i++) {
-          let kp1 = hand.keypoints[i];
-          let kp2 = hand.keypoints[i + 1];
-          line(kp1.x, kp1.y, kp2.x, kp2.y);
-        }
-
-        // Draw lines connecting keypoints 17 to 20
-        for (let i = 17; i < 20; i++) {
-          let kp1 = hand.keypoints[i];
-          let kp2 = hand.keypoints[i + 1];
-          line(kp1.x, kp1.y, kp2.x, kp2.y);
-        }
+        // 繪製食指的點
+        fill(255, 0, 0); // 紅色
+        noStroke();
+        circle(fingertip.x, fingertip.y, 16);
       }
     }
+
+    // 如果沒有手指接觸圓，停止拖動
+    if (!fingerOnCircle) {
+      isDragging = false;
+    }
+  } else {
+    // 如果沒有檢測到手，停止拖動
+    isDragging = false;
+  }
+
+  // 如果停止拖動，清空軌跡
+  if (!isDragging) {
+    trail = [];
   }
 }
