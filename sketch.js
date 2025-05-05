@@ -9,7 +9,8 @@ let circleX = 320; // 圓的初始 X 座標
 let circleY = 240; // 圓的初始 Y 座標
 let circleRadius = 50; // 圓的半徑
 let isDragging = false; // 是否正在拖動圓
-let trail = []; // 儲存軌跡的陣列
+let redTrail = []; // 儲存食指的軌跡
+let greenTrail = []; // 儲存大拇指的軌跡
 
 function preload() {
   // Initialize HandPose model with flipped video input
@@ -41,12 +42,22 @@ function draw() {
   noStroke();
   circle(circleX, circleY, circleRadius * 2);
 
-  // 畫出軌跡
+  // 畫出食指的紅色軌跡
   stroke(255, 0, 0); // 紅色線條
   strokeWeight(2);
   noFill();
   beginShape();
-  for (let point of trail) {
+  for (let point of redTrail) {
+    vertex(point.x, point.y);
+  }
+  endShape();
+
+  // 畫出大拇指的綠色軌跡
+  stroke(0, 255, 0); // 綠色線條
+  strokeWeight(2);
+  noFill();
+  beginShape();
+  for (let point of greenTrail) {
     vertex(point.x, point.y);
   }
   endShape();
@@ -59,17 +70,32 @@ function draw() {
       if (hand.confidence > 0.1) {
         // 獲取食指的 keypoint (keypoint 8)
         let fingertip = hand.keypoints[8];
+        // 獲取大拇指的 keypoint (keypoint 4)
+        let thumbtip = hand.keypoints[4];
 
         // 檢測食指是否接觸到圓
-        let d = dist(fingertip.x, fingertip.y, circleX, circleY);
-        if (d < circleRadius) {
+        let dFinger = dist(fingertip.x, fingertip.y, circleX, circleY);
+        if (dFinger < circleRadius) {
           // 如果接觸到圓，讓圓跟隨食指移動
           circleX = fingertip.x;
           circleY = fingertip.y;
 
-          // 設定拖動狀態並記錄軌跡
+          // 記錄食指的軌跡
           isDragging = true;
-          trail.push({ x: circleX, y: circleY });
+          redTrail.push({ x: circleX, y: circleY });
+          fingerOnCircle = true;
+        }
+
+        // 檢測大拇指是否接觸到圓
+        let dThumb = dist(thumbtip.x, thumbtip.y, circleX, circleY);
+        if (dThumb < circleRadius) {
+          // 如果接觸到圓，讓圓跟隨大拇指移動
+          circleX = thumbtip.x;
+          circleY = thumbtip.y;
+
+          // 記錄大拇指的軌跡
+          isDragging = true;
+          greenTrail.push({ x: circleX, y: circleY });
           fingerOnCircle = true;
         }
 
@@ -77,6 +103,11 @@ function draw() {
         fill(255, 0, 0); // 紅色
         noStroke();
         circle(fingertip.x, fingertip.y, 16);
+
+        // 繪製大拇指的點
+        fill(0, 255, 0); // 綠色
+        noStroke();
+        circle(thumbtip.x, thumbtip.y, 16);
       }
     }
 
@@ -91,6 +122,7 @@ function draw() {
 
   // 如果停止拖動，清空軌跡
   if (!isDragging) {
-    trail = [];
+    redTrail = [];
+    greenTrail = [];
   }
 }
